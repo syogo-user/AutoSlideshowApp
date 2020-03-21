@@ -26,6 +26,8 @@ class MainActivity : AppCompatActivity() {
     private var mTimer: Timer? = null
     private var mTimerSec = 0
     private var mHandler = Handler()
+    //外部ストレージへのアクセス許可
+    private var authority = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,7 +38,9 @@ class MainActivity : AppCompatActivity() {
             //パーミッションの許可状態を確認する
             if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED){
                 //外部ストレージへのアクセスが許可されている
+                authority = true
                 getContentsInfo()
+
             } else {
                 //許可されていないので許可ダイアログを表示する
                 requestPermissions(arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),PERMISSIONS_REQUEST_CODE)
@@ -47,38 +51,51 @@ class MainActivity : AppCompatActivity() {
         }
         //進むボタン押下時
         next.setOnClickListener{
-            changeIndex(NEXT)
-            picture.setImageURI(uriArray[index])
+            if (authority) {
+                changeIndex(NEXT)
+                picture.setImageURI(uriArray[index])
+            }
         }
         //戻るボタン押下時
         back.setOnClickListener{
-            changeIndex(BACK)
-            picture.setImageURI(uriArray[index])
+            if(authority) {
+                changeIndex(BACK)
+                picture.setImageURI(uriArray[index])
+            }
         }
         //再生・停止ボタン押下時
         start_stop.setOnClickListener{
-
-            if(mTimer == null) {
-                //再生ボタン押下
-                //タイマー作成
-                mTimer = Timer()
-                //タイマー始動
-                mTimer!!.schedule(object : TimerTask() {
-                    override fun run() {
-                        mTimerSec += 1
-                        mHandler.post {
-                            changeIndex(NEXT)
-                            picture.setImageURI(uriArray[index])
+            if(authority) {
+                if (mTimer == null) {
+                    //再生ボタン押下
+                    //タイマー作成
+                    mTimer = Timer()
+                    //タイマー始動
+                    mTimer!!.schedule(object : TimerTask() {
+                        override fun run() {
+                            mTimerSec += 1
+                            mHandler.post {
+                                changeIndex(NEXT)
+                                picture.setImageURI(uriArray[index])
+                            }
                         }
-                    }
-                }, 2000, 2000)//最初に始動させるまで２秒、ループの間隔を２秒。
-                start_stop.text ="停止"
-            }else{
-                //停止ボタン押下
-                start_stop.text ="再生"
-                mTimer!!.cancel()
-                mTimer = null
+                    }, 2000, 2000)//最初に始動させるまで２秒、ループの間隔を２秒。
+                    start_stop.text = "停止"
 
+                    //進む、戻るボタンを非活性
+                    next.isEnabled = false
+                    back.isEnabled = false
+                } else {
+                    //停止ボタン押下
+                    start_stop.text = "再生"
+                    mTimer!!.cancel()
+                    mTimer = null
+
+                    //進む、戻るボタンを活性
+                    next.isEnabled = true
+                    back.isEnabled = true
+
+                }
             }
         }
     }
@@ -87,6 +104,7 @@ class MainActivity : AppCompatActivity() {
         when(requestCode){
             PERMISSIONS_REQUEST_CODE ->
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED){
+                    authority = true
                     getContentsInfo()
                 }
         }
